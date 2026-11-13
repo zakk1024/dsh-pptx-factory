@@ -22,12 +22,14 @@ The two scripts are pure stdlib + python-pptx. Run them with the harness python 
 G1 `course_assistant.analyze(reportLevel=max)` → G1 `course_assistant.ask` (page-cited facts) → G2 `dsh_ppt_preview` → G3 `dsh_ppt_propose` (or pptwise deep-route) → G4 quiz bank gate `quiz_factory.py --check` + scan gate `scan_pptx.py` → G5 `dsh_ppt_review` / answer-me one-page + export.
 If any tool is absent or errors, take the file-path fallback written into that step — do not silently skip the stage. `dsh_ppt_preview/propose/review` live in bundle **dsh-ppt-flashmade** (0.7.1); check its install.json before calling.
 
-## Environment probe (run first, ~4 shell probes)
+## Environment probe (run first, ~4 shell probes — HARD RULE: echo or violation)
 
-1. Tool presence: check whether `course_assistant`, `dsh_ppt_preview/propose/review`, `ppt_check/edit/render/data`, `ppt_themes/ppt_templates` exist in the tool registry. Missing → take the file-path fallback written into the step that needs it.
-2. Interpreter with python-pptx: try `~/.dsh/dsh-runtimes/*/dependencies/python/bin/python3` first — system `/usr/bin/python3` on this machine has no `pptx` module (verified env fact, do not re-derive). Same interpreter for every script call.
-3. `soffice` on PATH? This machine: no → never plan a per-page-PNG render gate here; static scan scripts ARE the visual path.
-4. Image-gen endpoint (only if deck-studio/Deckline present): look for `render-settings.json` with an `/v1/images/generations` base URL inside its data root (`~/.dsh/deckline`, `~/.dsh/deck-studio`, `~/.dsh/plugin-data/dsh-plugin-deck-studio`, `~/.dsh/profiles/<p>/data/dsh-plugin-deck-studio`). None found = **fake mode**: deck-studio would emit placeholder panels → route styles through dsh-ppt themes + pptwise layers instead. Do not run scripts against `/tmp` (volatile here) — seed files live in the project folder or `testbed/`.
+Hard rule: the FIRST reply of every pipeline run MUST begin with an `[env-probe]` block that pastes the four probe results verbatim, one line per probe, `NAME=PRESENT|MISSING|FAKE|ABSENT` style (e.g. `course_assistant=MISSING`, `python-pptx=MISSING_SYSTEM_PYTHON`, `soffice=ABSENT`, `deck-studio=FAKE`). A probe that runs silently without being echoed is itself a rule violation. A missing tool is not a reason to stop and ask — take that step's file-path fallback, keep the name in the [env-probe] block AND in the G5 gap list.
+
+1. Tool presence: check whether `course_assistant`, `dsh_ppt_preview/propose/review`, `ppt_check/edit/render/data`, `ppt_themes/ppt_templates` exist in the tool registry, and whether the bundles `dsh-course-assistant`, `dsh-ppt`, `dsh-ppt-flashmade` exist under the profile `node_modules/`. Missing → take the file-path fallback written into the step that needs it, and keep that name in the [env-probe] block + G5 gap list. If running in the `preset-pptx-factory` session mode, a missing plugin shows as an empty roster slot — say so in the first reply, do not route around it in silence.
+2. Interpreter with python-pptx: try `~/.dsh/dsh-runtimes/*/dependencies/python/bin/python3` first; if NO interpreter can `import pptx`, echo `python-pptx=MISSING_ALL` and drop to text-only quiz (missing = degraded to text-only quiz; if pptx scripts work, do NOT claim this). Same interpreter for every script call.
+3. `soffice` on PATH? If absent → never plan a per-page-PNG render gate; static scan scripts ARE the visual path (echo `soffice=ABSENT`).
+4. Image-gen endpoint (only if deck-studio/Deckline present): look for `render-settings.json` with an `/v1/images/generations` base URL inside its data root (`~/.dsh/deckline`, `~/.dsh/deck-studio`, `~/.dsh/plugin-data/dsh-plugin-deck-studio`, `~/.dsh/profiles/<p>/data/dsh-plugin-deck-studio`). None found = **fake mode** (echo `deck-studio=FAKE`): deck-studio would emit placeholder panels → route styles through dsh-ppt themes + pptwise layers instead. Do not run scripts against `/tmp` (volatile here) — seed files live in the project folder or `testbed/`.
 
 ## G1 · Research (agent, silent)
 
@@ -57,7 +59,7 @@ If any tool is absent or errors, take the file-path fallback written into that s
 
 ## G5 · Deliver (human eye ② = one-page review, the ONLY input point)
 
-- Build the one-page answer-me review (skill `answer-me-with-html`: pipe draft to am.mjs `render - --no-open`; new page = no `--replace`). Panel content: pipeline trace (which gates degraded), quiz answer-reveal + coverage table, font/area self-check verdict, cost & duration.
+- Build the one-page answer-me review (skill `answer-me-with-html`: pipe draft to am.mjs `render - --no-open`; new page = no `--replace`). Panel content: pipeline trace (which gates degraded) + **gap list** 「缺件清單」 (missing tools/deps/degraded gates — write 無 when empty, never omit the section), quiz answer-reveal + coverage table, font/area self-check verdict, cost & duration.
 - PPTX export side: charts frozen to PNG (no live engine here); quiz reveal and live charts live only in the HTML main page (dual-track).
 - Citation discipline: every self-check claim cites `file:page`; cites=0 → the claim is a guess → do not write it.
 - Human comments → auto-reflow ≤1 round, re-entering only the failed gates.
@@ -70,6 +72,7 @@ If any tool is absent or errors, take the file-path fallback written into that s
 4. Token discipline: reflow ≠ regenerate — rerun only the failed stage/scan.
 5. This machine has no LibreOffice: PPTX visual truth comes from scan scripts + (with image-capable model) `dsh_ppt_review`; do not fabricate render receipts, and never plan the `ppt_render`/`office_render` chain here.
 6. Roster = law: the G1→G5 order above is what the pipeline IS; if a tool in the roster is missing, that is an environment fact to flag (probe #1), not a license to reorder stages.
+7. Gap echo = law: a missing tool/deps is a fact to REPORT, twice — `[env-probe]` block in the first reply, and the 缺件清單 section on the G5 page (write 無 when empty). Silent gap is the only true failure mode here.
 
 ## Disclosed reference (load on demand)
 

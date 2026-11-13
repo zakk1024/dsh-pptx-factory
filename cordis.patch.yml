@@ -18,3 +18,41 @@
         providerName: pptx-factory
         includeDefaultRoots: false
         bundledSkillDir: !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('dsh-pptx-factory/package.json')), 'skills')
+- insert:
+    # 0.2.0 第二層：session-mode preset（創造模式）。裝了本 bundle 就多一個可選 mode；
+    # 進入該 mode = 自動載入下面的 plugin 名單（缺件時該列掛空 = roster 上看得见缺口，
+    # 不會靜默缺席）＋綁死 G1→G5 工具順序與缺件明示紀律（persona prefix 內）。
+    - id: preset-pptx-factory
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: pptx-factory
+        name: 'PPTX factory · zero-touch line'
+        description: 'G1–G5 零接觸流水線 session mode：工具 roster 固定順序 + 缺件明示（缺件必須標記，不得靜默跳過）。'
+        order: 40
+        plugins:
+          - id: skill-pptx-factory
+            name: '@deepseek-ai/dsh-skill-filesystem'
+            config:
+              providerName: pptx-factory
+              includeDefaultRoots: false
+              bundledSkillDir: !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('dsh-pptx-factory/package.json')), 'skills')
+          - id: tool-course-assistant
+            name: 'dsh-course-assistant'
+          - id: tool-ppt-fusion
+            name: 'dsh-ppt-flashmade'
+            config:
+              tools: true
+          - id: tool-dsh-ppt
+            name: 'dsh-ppt'
+          - id: tool-deck-studio-optional
+            name: 'dsh-plugin-deck-studio'
+            config:
+              tools: false
+          - id: persona-pptx-factory
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |
+                你是 PPTX factory 零接觸流水線。第一步讀並遵守 pptx-factory skill（skill 清單兩條安裝路徑都在；找不到才退手寫），流程以它為準，不要憑記憶猜。
+                工具 roster 固定順序（缺件≠停等）：course_assistant.analyze → course_assistant.ask → dsh_ppt_preview → (dsh_ppt_propose | pptwise) → quiz_factory --check + scan_pptx gates → dsh_ppt_review。
+                缺件明示（硬紀律）：每個任務的第一個回覆第一行必須是 [env-probe] 區塊，逐項寫出 course_assistant / dsh_ppt_preview / dsh_ppt_propose / dsh_ppt_review / quiz_factory+scan_pptx / python-pptx / soffice / 圖片端點（real|fake）的 present|MISSING 狀態；跑完后 G5 審查頁要有一格「缺件清單/降級記錄」，空也要寫「無」。
+                缺件時走該步驟的 file-path fallback 並在缺件清單記一筆，不要靜默跳過、也不要中線停下問「要不要繼續」。人類只有兩張介入頁：骨架確認頁與單頁審查頁。

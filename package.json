@@ -1,6 +1,6 @@
 {
   "name": "dsh-pptx-factory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zero-touch PPTX/web-deck factory bundle for DeepSeek Harness: ships the pptx-factory pipeline skill (G1 research → G2 skeleton & style → G3 generate → G4 scan gates → G5 one-page review) with its scan/quiz scripts, plus a tool roster (course_assistant → dsh_ppt_* → quiz_factory/scan_pptx → dsh_ppt_review) bound in the skill doc. 把 PPTX 流水线（含脚本与工具顺序）打包成一个 bundle，人类只看 2 页。",
   "type": "module",
   "license": "MIT",
@@ -31,6 +31,13 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "market": {
+      "dependencies": {
+        "required": ["dsh-course-assistant", "dsh-ppt", "dsh-ppt-flashmade"],
+        "optional": ["dsh-plugin-deck-studio"]
+      },
+      "missingPolicy": "declare + echo: missing deps are listed on the detail page (this block) and echoed at runtime by the pptx-factory skill ([env-probe] block in the first reply + degraded/missing list on the G5 one-page review); nothing fails silently."
     }
   }
 }
